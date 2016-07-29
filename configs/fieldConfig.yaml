@@ -1,0 +1,21 @@
+inputDataDir: /home/ubuntu/workspace/mta_test/src_data/input/
+pubtracker: MTA_PublishingTracker.csv
+socrata_client_config_fname: socrata_config.yaml
+category_field: Category
+publishing_dept_field: Publishing Department
+dataset_name_field: Name
+dataset_base_url: https://data.sfgov.org/resource/
+dataset_dev_phase_field: Open Dataset
+oldfourXFour: Dataset ID
+publishing_strategy_field: publishing_strategy
+description_field: Description
+geotype_field: Feature Type
+data_change_freq_field: Data change frequency
+data_src_url_field: DataSrcLink
+src_records_cnt_field: SrcRecordsCnt
+dataset_records_cnt_field: DatasetRecordsCnt
+row_id_field: RowId
+fourXFour: fourXFour
+isLoaded: isLoaded
+datasets_migration_flag: True
+
