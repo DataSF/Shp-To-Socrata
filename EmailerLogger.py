@@ -1,8 +1,6 @@
 
 # coding: utf-8
 
-# In[1]:
-
 import smtplib
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
@@ -13,8 +11,11 @@ import time
 import datetime
 import logging
 from retry import retry
-
-
+import yaml
+import os
+import itertools
+import base64
+import inflection
 # In[ ]:
 
 class pyLogger:
@@ -25,9 +26,9 @@ class pyLogger:
 
     def setConfig(self):
         #open a file to clear log
-        fo = open(self.logfn, "w")
+        fo = open(self.logfile_fullpath, "w")
         fo.close
-        logging.basicConfig(level=logging.DEBUG, filename=self.logfn, format='%(asctime)s %(levelname)s %(name)s %(message)s')
+        logging.basicConfig(level=logging.DEBUG, filename=self.logfile_fullpath, format='%(asctime)s %(levelname)s %(name)s %(message)s')
         logger=logging.getLogger(__name__)
 
 
@@ -136,31 +137,31 @@ class logETLLoad:
         return dataset
     
     def makeJobStatusAttachment(self,  finishedDataSets ):
-        with open(self.logfile_fullpath, 'w') as csvfile:
+        with open(self.logfile_fullpath, 'w',  encoding='utf-8') as csvfile:
             fieldnames = finishedDataSets[0].keys()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             for dataset in finishedDataSets:
                 writer.writerow(dataset)
 
-    def getJobStatus(self):
+    def getJobStatus(self, updateSchedule):
         if self.failure: 
-            return  "FAILED: " + self.job_name
+            return  "FAILED: " + inflection.titleize(updateSchedule) + " " + self.job_name
         else: 
-            return  "SUCCESS: " + self.job_name
+            return  "SUCCESS: " + inflection.titleize(updateSchedule) + " " +  self.job_name 
 
     def makeJobStatusMsg( self,  dataset  ):
         msg = dataset['jobStatus'] + ": " + dataset['Name'] + "-> Total Rows:" + str(dataset[self.shp_records]) + ", Rows Inserted: " + str(dataset[self.rowsInserted])  + ", Link: "  + self.dataset_base_url + dataset[self.fourXFour] + " \n\n " 
         return msg
     
-    def sendJobStatusEmail(self, finishedDataSets):
+    def sendJobStatusEmail(self, finishedDataSets, updateSchedule):
         msgBody  = "" 
         for i in range(len(finishedDataSets)):
             #remove the column definitions, check if records where inserted
             dataset = self.sucessStatus( self.removeKeys(finishedDataSets[i]))
             msg = self.makeJobStatusMsg( dataset  )
             msgBody  = msgBody  + msg
-        subject_line = self.getJobStatus()
+        subject_line = self.getJobStatus( updateSchedule )
         email_attachment = self.makeJobStatusAttachment(finishedDataSets)
         e = emailer(self.inputdir, self.configItems)
         emailconfigs = e.getEmailConfigs()
@@ -171,9 +172,6 @@ class logETLLoad:
         print "****************JOB STATUS******************"
         print subject_line
         print "Email Sent!"
-
-
-# In[2]:
 
 if __name__ == "__main__":
     main()

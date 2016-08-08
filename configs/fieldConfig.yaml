@@ -1,5 +1,4 @@
-inputDataDir: /home/ubuntu/workspace/mta_test/src_data/input/
-pubtracker: MTA_PublishingTracker.csv
+pubtracker: _geometry_datasets.csv
 socrata_client_config_fname: socrata_config.yaml
 category_field: Category
 publishing_dept_field: Publishing Department
@@ -18,5 +17,7 @@ row_id_field: RowId
 fourXFour: fourXFour
 isLoaded: isLoaded
 datasets_migration_flag: True
-meta_csv_file: geo_data_list_short.csv
-
+job_name: GeoData Migration Update
+log_dir: /home/ubuntu/workspace/logs/
+email_config_fname: email_config.yaml
+exception_logfile: exception_log.txt

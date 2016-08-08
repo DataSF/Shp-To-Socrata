@@ -3,22 +3,38 @@
 
 # ## Update Script
 
-# In[81]:
+#!/usr/bin/env python
 
 from ShapeFileToSocrata import *
-import logging
-from retry import retry
 from EmailerLogger import *
+from optparse import OptionParser
 
+#handle update schedule--> we have the following update schedules
+#daily, weekly, monthly, quartly, annually, as needed
+# will make an option for each. 
 
-# In[73]:
+helpmsg = 'Use the -u option plus update schedule. Update Schedule choices are daily, weekly, monthly, quarterly, annual, asNeeded'
+parser = OptionParser(usage='usage: %prog [options] ')
+parser.add_option('-u', '--updateSchedule',
+                      type='choice',
+                      action='store',
+                      dest='updateSchedule',
+                      choices=['daily', 'weekly', 'monthly', 'quarterly', 'annual', 'asNeeded'],
+                      default=None,
+                      help=helpmsg ,)
+(options, args) = parser.parse_args()
+if  options.updateSchedule is None:
+    print "ERROR: You must indicate an update schedule for the geodatasets!"
+    print helpmsg
+    exit(1)
+
+updateSchedule = options.updateSchedule
+
 
 input_dir_shp = '/home/ubuntu/workspace/src_files/'
 config_inputdir = '/home/ubuntu/workspace/configs/'
 fieldConfigFile = 'fieldConfig.yaml'
 
-
-# In[74]:
 
 cI =  ConfigItems(config_inputdir ,fieldConfigFile  )
 configItems = cI.getConfigs()
@@ -27,8 +43,6 @@ client = sc.connectToSocrata()
 clientItems = sc.connectToSocrataConfigItems()
 lte = logETLLoad(config_inputdir, configItems)
 
-
-# In[75]:
 
 scrud = SocrataCRUD(client, clientItems, configItems)
 sms = ShpMetaData(client, configItems )
@@ -40,46 +54,36 @@ fourXFour = configItems['fourXFour']
 oldfourXFour = configItems['oldfourXFour'] 
 datasets_migration_flag  = configItems['datasets_migration_flag']
 meta_csv = configItems['pubtracker']
+isLoaded =  configItems['isLoaded']
 lg = pyLogger(configItems)
 lg.setConfig()
+counter = 0
 
+metaSchema, datasets = sms.make_headers_and_rowobj(config_inputdir, updateSchedule + meta_csv)
 
-# In[76]:
-
-metaSchema, datasets = sms.make_headers_and_rowobj(config_inputdir, "weekly" + meta_csv)
-
-
-# In[77]:
-
-for dataset in datasets:
-    print "***************"
-    print dataset['Name']
-    print "****************"
-
-
-# In[78]:
-
+print "****************UPDATING GEODATASETS******************"
 for dataset in datasets:
     print "***************"
     print dataset['Name']
     print "****************"
     dataset = sms.getMetaData(dataset, datasets_migration_flag)
-    if len(dataset[fourXFour]) == 9:
+    if ((len(dataset[fourXFour]) == 9) and (dataset['isLoaded'] == 'success')):
         if (shpio.downloadShp(input_dir_shp + "current/" , dataset)):
             dataset = sds.postShapeData(input_dir_shp, dataset, scrud)
             print "******"
             print dataset['isLoaded'] + ":" + dataset[fourXFour]
         #clean up files
         shpio.removeShpFiles(input_dir_shp + "current/")
-    print dataset
-    print "*************************************************"
+        counter = counter + 1
+    else:
+        print "not an line or polygon dataset"
+        datasets.pop(counter)
     print "*************************************************"
 
-msg = lte.sendJobStatusEmail(datasets)
+print "****************FINAL RESULTS************************************"
+msg = lte.sendJobStatusEmail(datasets, updateSchedule)
 client.close()
 
-
-# In[ ]:
 
 
 

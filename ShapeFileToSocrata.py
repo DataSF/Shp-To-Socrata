@@ -5,6 +5,7 @@
 
 from __future__ import division
 import geopandas as gpd
+import shutil
 import fiona
 import inflection
 import pandas as pd
@@ -31,7 +32,8 @@ import zipfile
 from fiona.crs import from_epsg
 from retry import retry
 from shapely.geometry import Polygon
-
+from socket import error as SocketError
+import errno
 
 # In[277]:
 
@@ -335,7 +337,8 @@ class ShpDataToSocrata(ShpToSocrata):
         #shp_col = [ col for col in shp_cols if shp[col] == 'geometry' ]
         shp_col = ['geometry']
         if not len(shp_col) == 1:
-            raise MyException
+            print "ERROR: More than 1 geom column"
+            return False
         shp_col = shp_col[0]
         return shp_col
     
@@ -469,23 +472,39 @@ class shpIO:
     @staticmethod
     def downloadFile(url, path, fname):
         print url
+        #add headers to request to prevent 403 errors
+        hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+       'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+       'Accept-Encoding': 'none',
+       'Accept-Language': 'en-US,en;q=0.8',
+       'Connection': 'keep-alive'}
         if url:
             attempts = 0
+            response = None
             while attempts < 3:
+                req = urllib2.Request(url, headers=hdr)
                 try:
-                    response = urllib2.urlopen(url, timeout = 5)
-                    content = response.read()
-                    f = open( path+fname, 'wb' )
-                    f.write( content )
-                    f.close()
-                    if os.path.exists(path+ fname):
-                        return True
-                    else:
-                        print "ERROR: Something weird happened: did not download shp file"
+                    #response = urllib2.urlopen(url, timeout = 5)
+                    response = urllib2.urlopen(req, timeout = 5)
+                except SocketError as e:
+                    if e.errno != errno.ECONNRESET:
+                        print "ERROR-CONNECTION GOT SLAMMED/DISCONNECTED"
                         return False
-                except urllib2.URLError as e:
-                    attempts += 1
-                    print type(e)
+                if response:
+                    try:
+                        content = response.read()
+                        f = open( path+fname, 'wb' )
+                        f.write( content )
+                        f.close()
+                        if os.path.exists(path+ fname):
+                            return True
+                        else:
+                            print "ERROR: Something weird happened: did not download shp file"
+                            return False
+                    except urllib2.URLError as e:
+                        attempts += 1
+                        print type(e)
                     print "Could not download shp files"
         else:
             print "EEROR: URL for SRC Download is missing!"
@@ -525,7 +544,12 @@ class shpIO:
         filelist = [ path+f for f in os.listdir(path) ]
         for f in filelist:
             if os.path.isdir(f):
-                os.rmdir(f)
+                try: 
+                    shutil.rmtree(f)
+                except:
+                    print "ERROR: could not remove src DIR!"
+                    return False
+                    
             else:
                 if os.path.isfile(f):
                     os.remove(f)
@@ -547,8 +571,5 @@ class shpIO:
               
 
 
-# In[ ]:
-
 if __name__ == "__main__":
     main()
-
