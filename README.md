@@ -4,7 +4,8 @@
 
 ### The primary goal of this repo is to migrate geo shape files to the Socrata naive geo API.
 
-The city of SF has about 62 datasets that were hosted on Socrata as zipped shape files
+The city of SF has about 62 datasets that were hosted on Socrata as zipped shape files.
+Having the data as zipped shape files obscured the dataset and made impossible for users to get the exact data they needed through the API.
 We wanted these to be availible to users as geojson, and other formats.
 This is the script we used to migrate them. 
 
@@ -14,8 +15,8 @@ This is the script we used to migrate them.
 * reprojects the geodataset to web mercator
 * Creates the initial dataset schema in Socrata from the schema found in the shape file
 * Converts the geodata in the shape file to geojson
-* Inserts/Uploads data from the shape file to Socrata using the socrata API; sends the data in chunks as json post requests as opposed to try to upload an entire file.
-* Supports multiple retries; checks to make sure all the data in the file made it up there.
+* Inserts/Uploads data from the shape file to Socrata using the socrata API; sends the data in chunks as json post requests as opposed to trying to upload an entire file object.
+* Supports multiple retries; checks to make sure all the data in the shape file made it up to the socrata API.
 * Sends email notifications to receipts to let users know if the job was successful or notifications
 * Also includes scripts for updating/upserting the geodatasets
 
