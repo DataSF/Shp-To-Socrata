@@ -1,9 +1,8 @@
 
 # coding: utf-8
 
-# In[312]:
+# In[1]:
 
-from __future__ import division
 import geopandas as gpd
 import fiona
 import inflection
@@ -14,6 +13,7 @@ import inflection
 import re
 import datetime
 import os
+from __future__ import division
 import requests
 from sodapy import Socrata
 import yaml
@@ -33,7 +33,7 @@ from retry import retry
 from shapely.geometry import Polygon
 
 
-# In[277]:
+# In[2]:
 
 def filterDictList( dictList, keysToKeep):
     return  [ {key: x[key] for key in keysToKeep if key in x.keys() } for x in dictList]
@@ -80,7 +80,7 @@ class SocrataClient:
         return 0
 
 
-# In[278]:
+# In[3]:
 
 class SocrataCRUD:
     
@@ -190,7 +190,7 @@ class SocrataCRUD:
         
 
 
-# In[279]:
+# In[4]:
 
 class ShpMetaData:
     def __init__(self, client, configItems):
@@ -249,7 +249,7 @@ class ShpMetaData:
         return dataset
 
 
-# In[280]:
+# In[5]:
 
 class ShpToSocrata:
     def __init__(self):
@@ -268,7 +268,7 @@ class ShpToSocrata:
         return shp.columns.values.tolist()
 
 
-# In[281]:
+# In[6]:
 
 class ShpShemaToSocrata(ShpToSocrata):
     
@@ -276,7 +276,7 @@ class ShpShemaToSocrata(ShpToSocrata):
         self.publishing_dept = configItems['publishing_dept_field']
     
     def makeDatasetColsShp(self, shp):
-        name_map = { 'int64': 'number', 'float64' : 'number', 'Polygon': 'polygon', 'MultiPolygon': 'multipolygon', 'LineString':'line', 'Polyline': 'multiline',  'Line':'line'}
+        name_map = { 'int64': 'number', 'float64' : 'number', 'Polygon': 'polygon', 'MultiPolygon': 'polygon', 'LineString':'line', 'Polyline': 'multiline',  'Line':'line'}
         shpCols = self.getShapeCols(shp)
         cols = []
         for col in shpCols:
@@ -314,7 +314,7 @@ class ShpShemaToSocrata(ShpToSocrata):
         return dataset
 
 
-# In[282]:
+# In[7]:
 
 class ShpDataToSocrata(ShpToSocrata):
     
@@ -367,7 +367,7 @@ class ShpDataToSocrata(ShpToSocrata):
             print "didn't reproject shape properly"
         return shp
     
-    def getShpData(self, shp, shp_col, dataset):
+    def getShpData(self, shp, shp_col):
         '''tests to see if there is null geom. If so it splits out the df 
            and then reprojects to espg 4326 and then transforms it into a dictionarylist;  '''
         shp_dictList = None
@@ -382,17 +382,17 @@ class ShpDataToSocrata(ShpToSocrata):
             shpNotNullGeom = self.getNotNullShpGeom(shp)
             shpNotNullGeom = self.reprojectShp(shpNotNullGeom)
             #explode the multi polygons, return geojson
-            shpNotNullGeom_dictListJson = self.getShpGeoJson(shpNotNullGeom, shp_col, dataset)
+            shpNotNullGeom_dictListJson = self.getShpGeoJson(shpNotNullGeom, shp_col)
             
             #combine everything 
             shp_dictList =  shpNotNullGeom_dictListJson + shpNullGeom_dictList
         else:
             print "all geoms have vals"
             shp = self.reprojectShp(shp)
-            shp_dictList = self.getShpGeoJson(shp, shp_col, dataset)
+            shp_dictList = self.getShpGeoJson(shp, shp_col)
         return shp_dictList
     
-    def getShpGeoJson(self, shp, shp_col, dataset):
+    def getShpGeoJson(self, shp, shp_col):
         '''
           map the geom in dictlist to geojson; explode multipolygons if they exist
         '''
@@ -409,7 +409,7 @@ class ShpDataToSocrata(ShpToSocrata):
     def postShapeData(self,  input_dir_shp, dataset, socrataCRUD):
         shp = self.readShpFile(input_dir_shp, "current")
         shp_col = self.getShpCol(shp)
-        shp_dictList = self.getShpData(shp, shp_col, dataset)
+        shp_dictList = self.getShpData(shp, shp_col)
         dataset[self.shp_records] = len(shp_dictList)
         dataset[self.rowsInserted] = 0
         dataset = socrataCRUD.postDataToSocrata(dataset, shp_dictList)
@@ -460,7 +460,7 @@ class ShpDataToSocrata(ShpToSocrata):
         return explodedShapes
 
 
-# In[283]:
+# In[8]:
 
 class shpIO:
     def __init__(self, configItems):
@@ -531,7 +531,8 @@ class shpIO:
                     os.remove(f)
         if self.getFileCnt(path) == 0:
             return True
-        return False
+        else:
+            return false
     
     @staticmethod
     def moveShpFilesToCurrentDir( path):
@@ -547,8 +548,127 @@ class shpIO:
               
 
 
+# In[79]:
+
+input_dir_shp = '/home/ubuntu/workspace/src_files/'
+config_inputdir = '/home/ubuntu/workspace/configs/'
+meta_csv = 'geo_data_list_short.csv'
+fieldConfigFile = 'fieldConfig.yaml'
+
+
+# In[80]:
+
+cI =  ConfigItems(config_inputdir ,fieldConfigFile  )
+configItems = cI.getConfigs()
+sc = SocrataClient(config_inputdir, configItems)
+client = sc.connectToSocrata()
+clientItems = sc.connectToSocrataConfigItems()
+
+
+# In[81]:
+
+scrud = SocrataCRUD(client, clientItems, configItems)
+sms = ShpMetaData(client, configItems )
+ss = ShpToSocrata()
+sss = ShpShemaToSocrata(ss, configItems )
+sds = ShpDataToSocrata(client, ss,configItems )
+shpio = shpIO(configItems)
+fourXFour = configItems['fourXFour']
+oldfourXFour = configItems['oldfourXFour'] 
+datasets_migration_flag  = configItems['datasets_migration_flag']
+
+
+# In[82]:
+
+metaSchema, datasets = sms.make_headers_and_rowobj(config_inputdir, meta_csv)
+
+
+# In[83]:
+
+for dataset in datasets[72:73]:
+    print "***************"
+    print dataset['Name']
+    print "****************"
+
+
+# In[84]:
+
+for dataset in datasets[72:73]:
+    print "***************"
+    print dataset['Name']
+    print "****************"
+    dataset = sms.getMetaData(dataset, datasets_migration_flag)
+    if (shpio.downloadShp(input_dir_shp + "current/" , dataset)):
+        if len(dataset[fourXFour]) == 9:
+            if dataset['isLoaded'] != 'success':
+                print dataset['Name']
+                dataset = sds.postShapeData(input_dir_shp, dataset, scrud)
+                print dataset['fourXFour']
+        else:
+            dataset = sss.makeSchemaShp( input_dir_shp, dataset, scrud)
+            print "******"
+            print dataset[fourXFour]
+            print "******"
+            print "Created dataset successfullly; now inserting the data"
+            if len(dataset[fourXFour]) > 0:
+                dataset = sds.postShapeData(input_dir_shp, dataset, scrud)
+                #publish the dataset and make it public
+                client.publish(dataset[fourXFour])
+                client.set_permission(dataset[fourXFour], "public")
+                #print dataset 
+                print "******"
+                print dataset['isLoaded']
+        #clean up files
+    shpio.removeShpFiles(input_dir_shp + "/current/")
+    print "*************************************************"
+    print "*************************************************"
+client.close()
+sms.writeMetaData(config_inputdir, meta_csv, datasets)
+
+
+# In[72]:
+
+#cool = client.get_metadata('qcxd-tp4u')
+#print cool
+
+
+
+
+
+# In[14]:
+
+#shp[shp.isnull().any(axis=1)]
+#print len(shp[shp['geometry'].isnull()])
+#shp[shp['geometry'].notnull()]
+
+#shp = self.readShpFile(input_dir_shp, "current")
+#shp_col = self.getShpCol(shp)
+#shp_dictList = self.getShpData(shp, shp_col)
+
+
+# In[13]:
+
+#shp = sds.readShpFile(input_dir_shp, "current")
+#shp_dict = sds.getShpData(shp)
+#explodeMulti(shp_dict)
+
+
+# In[67]:
+
+#qry = '?$select=count(*)'
+#qry = "https://"+ clientItems['url']+"/resource/" +"bmjt-kdwv"+ ".json" + qry
+#r = requests.get( qry , auth=(clientItems['username'],  base64.b64decode(clientItems['password'])))
+#cnt =  r.json()
+print cnt
+#
+
+
+# In[262]:
+
+#client.get("srq6-hmpi")
+
+
 # In[ ]:
 
-if __name__ == "__main__":
-    main()
+
 

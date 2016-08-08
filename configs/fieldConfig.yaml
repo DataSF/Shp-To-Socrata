@@ -18,4 +18,5 @@ row_id_field: RowId
 fourXFour: fourXFour
 isLoaded: isLoaded
 datasets_migration_flag: True
+meta_csv_file: geo_data_list_short.csv
 
