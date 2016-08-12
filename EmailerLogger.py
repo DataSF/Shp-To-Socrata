@@ -16,7 +16,36 @@ import os
 import itertools
 import base64
 import inflection
-# In[ ]:
+import csv, codecs, cStringIO
+
+class UnicodeWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = cStringIO.StringIO()
+        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
+        self.stream = f
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow([s.encode("utf-8") for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
 
 class pyLogger:
     def __init__(self, configItems):
@@ -137,12 +166,15 @@ class logETLLoad:
         return dataset
     
     def makeJobStatusAttachment(self,  finishedDataSets ):
-        with open(self.logfile_fullpath, 'w',  encoding='utf-8') as csvfile:
+        with open(self.logfile_fullpath, 'w') as csvfile:
             fieldnames = finishedDataSets[0].keys()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             for dataset in finishedDataSets:
-                writer.writerow(dataset)
+                try:
+                    writer.writerow({ s:str(v).encode("ascii",  'ignore') for s, v in dataset.iteritems()  } )
+                except: 
+                    print "could not write row"
 
     def getJobStatus(self, updateSchedule):
         if self.failure: 
@@ -172,7 +204,9 @@ class logETLLoad:
         print "****************JOB STATUS******************"
         print subject_line
         print "Email Sent!"
-
+    
+    
+    
 if __name__ == "__main__":
     main()
 
