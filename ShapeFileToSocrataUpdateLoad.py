@@ -4,10 +4,11 @@
 # ## Update Script
 
 #!/usr/bin/env python
-
+from ConfigUtils import *
 from ShapeFileToSocrata import *
 from EmailerLogger import *
 from optparse import OptionParser
+from ConfigUtils import *
 
 #handle update schedule--> we have the following update schedules
 #daily, weekly, monthly, quartly, annually, as needed
@@ -38,10 +39,12 @@ fieldConfigFile = 'fieldConfig.yaml'
 
 cI =  ConfigItems(config_inputdir ,fieldConfigFile  )
 configItems = cI.getConfigs()
+
+lte = logETLLoad(config_inputdir, configItems)
 sc = SocrataClient(config_inputdir, configItems)
 client = sc.connectToSocrata()
 clientItems = sc.connectToSocrataConfigItems()
-lte = logETLLoad(config_inputdir, configItems)
+
 
 
 scrud = SocrataCRUD(client, clientItems, configItems)
