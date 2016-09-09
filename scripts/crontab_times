@@ -1,5 +1,5 @@
 0 4 * * * /home/ubuntu/scripts/geoShps/dailyShpUpload.sh
-20 4 * * * /home/ubuntu/scripts/geoShps/weeklyShpUpload.sh
+20 4 * * 6 /home/ubuntu/scripts/geoShps/weeklyShpUpload.sh
 0 0 1 * * /home/ubuntu/scripts/geoShps/monthlyShpUpload.sh
 30 4 1 JAN,APR,JUL,OCT * /home/ubuntu/scripts/geoShps/quarterlyShpUpload.sh
 0 5 1 1 * /home/ubuntu/scripts/geoShps/annualShpUpload.sh
