@@ -81,12 +81,21 @@ class ShpMetaData:
     def getMetaData(self, dataset, shp_migration=False):
         '''gets metadata off socrata or a spreadsheet. uses the optional shp_migration field. If migration is true, then will hit the old dataset on socrata, else will hit spreadsheet'''
         if shp_migration:
-            dataset_metaData = self.client.get_metadata(dataset[self.oldfourXFour])
-            dataset_metaData_keys = dataset_metaData.keys()
-            metadata_keys = dataset_metaData['metadata'].keys()
+	    try:
+            	dataset_metaData = self.client.get_metadata(dataset[self.oldfourXFour])
+            	dataset_metaData_keys = dataset_metaData.keys()
+            	metadata_keys = dataset_metaData['metadata'].keys()
+	    except Exception, e:
+		dataset_metadData = {}
+		dataset_metaData_keys = {}
+		metadata_keys = {}
+		print str(e)
             if "additionalAccessPoints" in metadata_keys:
-                dataset[self.data_src_url] =  dataset_metaData['metadata']['additionalAccessPoints'][0]['urls']['zip']
-            if ("accessPoints" in metadata_keys) and ( "additionalAccessPoints" not in  metadata_keys):
+		try:
+                	dataset[self.data_src_url] =  dataset_metaData['metadata']['additionalAccessPoints'][0]['urls']['zip']
+            	except Exception, e:
+			print str(e)
+	    if ("accessPoints" in metadata_keys) and ( "additionalAccessPoints" not in  metadata_keys):
                 accessPointKeys = dataset_metaData['metadata']['accessPoints'].keys()
                 if "zip" in accessPointKeys:
                     dataset[self.data_src_url] =  dataset_metaData['metadata']['accessPoints']['zip']
@@ -96,8 +105,11 @@ class ShpMetaData:
                 dataset['tags'] = dataset_metaData['tags']
             else:
                 dataset['tags'] = []
-            dataset[self.category] = dataset_metaData['category']
-            if "description" in dataset_metaData_keys:
+            try:
+	    	dataset[self.category] = dataset_metaData['category']
+            except Exception, e:
+		print str(e)
+	    if "description" in dataset_metaData_keys:
                 dataset[self.description] =  dataset_metaData['description']
         else:
             dataset['tags'] = []

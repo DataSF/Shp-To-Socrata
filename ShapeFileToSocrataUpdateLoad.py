@@ -32,19 +32,17 @@ if  options.updateSchedule is None:
 updateSchedule = options.updateSchedule
 
 
-input_dir_shp = '/home/ubuntu/workspace/src_files/'
-config_inputdir = '/home/ubuntu/workspace/configs/'
+input_dir_shp = '/home/ubuntu/geoShps/src_files/'
+config_inputdir = '/home/ubuntu/geoShps/configs/'
 fieldConfigFile = 'fieldConfig.yaml'
 
 
 cI =  ConfigItems(config_inputdir ,fieldConfigFile  )
 configItems = cI.getConfigs()
-
-lte = logETLLoad(config_inputdir, configItems)
 sc = SocrataClient(config_inputdir, configItems)
 client = sc.connectToSocrata()
 clientItems = sc.connectToSocrataConfigItems()
-
+lte = logETLLoad(config_inputdir, configItems)
 
 
 scrud = SocrataCRUD(client, clientItems, configItems)
@@ -72,12 +70,15 @@ for dataset in datasets:
     dataset = sms.getMetaData(dataset, datasets_migration_flag)
     if ((len(dataset[fourXFour]) == 9) and (dataset['isLoaded'] == 'success')):
         if (shpio.downloadShp(input_dir_shp + "current/" , dataset)):
-            dataset = sds.postShapeData(input_dir_shp, dataset, scrud)
-            print "******"
-            print dataset['isLoaded'] + ":" + dataset[fourXFour]
-        #clean up files
-        shpio.removeShpFiles(input_dir_shp + "current/")
-        counter = counter + 1
+            try:
+	    	dataset = sds.postShapeData(input_dir_shp, dataset, scrud)
+            	print "******"
+            	print dataset['isLoaded'] + ":" + dataset[fourXFour]
+        	#clean up files
+        	shpio.removeShpFiles(input_dir_shp + "current/")
+        	counter = counter + 1
+	    except Exception, e:
+		print str(e)
     else:
         print "not an line or polygon dataset"
         datasets.pop(counter)
